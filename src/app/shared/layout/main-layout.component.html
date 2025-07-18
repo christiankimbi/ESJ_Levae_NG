@@ -1,1 +1,20 @@
-<p>main-layout works!</p>
+<nav class="navbar navbar-expand navbar-light bg-light px-3">
+  <a class="navbar-brand" routerLink="/">ESJ Leave</a>
+
+  <ul class="navbar-nav me-auto">
+  <li class="nav-item" routerLinkActive="active">
+    <a class="nav-link" routerLink="/leave">My Leave</a>
+  </li>
+  <li class="nav-item" routerLinkActive="active" *ngIf="isManager">
+    <a class="nav-link" routerLink="/approvals">Approvals</a>
+  </li>
+  </ul>
+
+  <div class="ms-auto">
+    <button class="btn btn-outline-danger btn-sm" (click)="logout()">Logout</button>
+  </div>
+</nav>
+
+<div class="p-3">
+  <router-outlet />
+</div>

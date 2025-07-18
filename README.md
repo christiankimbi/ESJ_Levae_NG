@@ -1,19 +1,31 @@
-# ESJ Leave Management System - Front End (Angular 17)
-
-A functional leave management
+Angular frontend for the ESJ Leave Management System.
 
 ## Features
 
-- Authentication
-- Leave Booking
-- Leave Update
-- Leave Cancellation
-- Manager Approval
-- Super Admin Approvals
+- Email/password login
+- Submit and edit leave requests
+- Manager approval and rejection
+- Leave days auto-calculated (excluding weekends and 2025 SA public holidays)
+- Basic success/error notifications
 
-## Tech Stack
+## Setup
 
-- Angular 17 (standalone)
-- RxJS
-- Bootstrap (SCSS)
-- TypeScript
+Runs at: http://localhost:4200
+
+## API Configuration
+
+Set your backend URL in `src/environments/environment.ts`:
+
+### Configure based on ESJ backend
+
+export const environment = {
+apiUrl: 'https://localhost:5001/api'
+production: false
+};
+
+###RUN
+
+```bash
+npm install
+ng serve
+```

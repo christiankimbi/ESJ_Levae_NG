@@ -1,45 +1,30 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { LeaveService } from '@services/leave.service';
-import { LeaveRequest } from '@shared/models/leave-request.model';
 import { extractResultData } from '@shared/utils/result.utils';
+import { LeaveRequestResult } from '@shared/models/leave-request.model';
 import { LeaveTypeLabelPipe } from '@shared/pipes/leave-type-label.pipe';
+import { LeaveStatusLabelPipe } from '@shared/pipes/leave-status-label.pipe';
+declare var bootstrap: any;
 
 @Component({
   selector: 'app-approvals-list',
   standalone: true,
-  imports: [CommonModule, LeaveTypeLabelPipe],
-  template: `
-    <div class="container mt-4">
-      <h5>Team Leave Requests</h5>
-      <ul class="list-group mt-3" *ngIf="leaves.length > 0; else noData">
-        <li class="list-group-item" *ngFor="let leave of leaves">
-          <div>
-            <strong>{{ leave.leaveType | leaveTypeLabel }}</strong> |
-            {{ leave.startDate | date }} → {{ leave.endDate | date }}
-            <div class="text-muted small">{{ leave.comments }}</div>
-          </div>
-          <div class="mt-2">
-            <button class="btn btn-sm btn-success me-2" (click)="approve(leave.id)">Approve</button>
-            <button class="btn btn-sm btn-danger" (click)="reject(leave.id)">Reject</button>
-          </div>
-        </li>
-      </ul>
-      <ng-template #noData>
-        <p class="text-muted">No pending team leave requests.</p>
-      </ng-template>
-    </div>
-  `,
+  imports: [CommonModule, FormsModule, LeaveStatusLabelPipe, LeaveTypeLabelPipe],
+  templateUrl: './approvals-list.component.html',
 })
 export class ApprovalsListComponent implements OnInit {
   private leaveService = inject(LeaveService);
-  leaves: LeaveRequest[] = [];
 
+  leaves: LeaveRequestResult[] = [];
+  selectedId: string | null = null;
+  rejectionReason: string = '';
 
   ngOnInit(): void {
     this.leaveService.getTeamLeave().subscribe({
       next: (res) => {
-        const data = extractResultData<LeaveRequest[]>(res, () =>
+        const data = extractResultData<LeaveRequestResult[]>(res, () =>
           alert('Failed to load team leave requests.')
         );
         this.leaves = data ?? [];
@@ -62,14 +47,22 @@ export class ApprovalsListComponent implements OnInit {
     });
   }
 
-  reject(id: string) {
-    if (!confirm('Reject this leave request?')) return;
-    const reason = prompt('Enter rejection reason:');
-    if (!reason) return;
+  openRejectModal(id: string) {
+    this.selectedId = id;
+    this.rejectionReason = '';
+    const modal = new bootstrap.Modal(document.getElementById('rejectModal'));
+    modal.show();
+  }
 
-    this.leaveService.rejectLeave(id, reason).subscribe({
+  submitRejection(event: Event) {
+    event.preventDefault();
+    if (!this.selectedId || !this.rejectionReason) return;
+
+    this.leaveService.rejectLeave(this.selectedId, this.rejectionReason).subscribe({
       next: () => {
-        this.leaves = this.leaves.filter(l => l.id !== id);
+        this.leaves = this.leaves.filter(l => l.id !== this.selectedId);
+        const modalEl = document.getElementById('rejectModal');
+        if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
       },
       error: () => alert('Could not reject request.')
     });

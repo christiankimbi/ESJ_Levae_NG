@@ -1,1 +1,45 @@
-<p>leave-form works!</p>
+<div class="container mt-4" style="max-width: 500px;">
+  <div *ngIf="notification.state$ | async as state" class="alert alert-{{ state.type }} alert-dismissible fade show"
+    role="alert">
+    {{ state.message }}
+    <button type="button" class="btn-close" (click)="notification.clear()"></button>
+  </div>
+
+  <h5 *ngIf="!isEdit">Submit Leave</h5>
+  <h5 *ngIf="isEdit">Update Leave</h5>
+
+  <form [formGroup]="form" (ngSubmit)="submit()">
+    <div class="mb-3">
+      <label>Leave Type</label>
+      <select class="form-select" formControlName="leaveType">
+        <option [value]="1">Annual</option>
+        <option [value]="2">Sick</option>
+        <option [value]="3">Unpaid</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <label>Start Date</label>
+      <input type="date" class="form-control" formControlName="startDate" />
+    </div>
+
+    <div class="mb-3">
+      <label>End Date</label>
+      <input type="date" class="form-control" formControlName="endDate" />
+    </div>
+
+    <div class="mb-3">
+      <label>Leave Days</label>
+      <input type="number" class="form-control" [value]="daysCount" readonly />
+    </div>
+
+    <div class="mb-3">
+      <label>Comments</label>
+      <textarea class="form-control" formControlName="comments"></textarea>
+    </div>
+
+    <button class="btn btn-primary w-100" [disabled]="form.invalid">
+      {{ isEdit ? 'Update' : 'Submit' }}
+    </button>
+  </form>
+</div>

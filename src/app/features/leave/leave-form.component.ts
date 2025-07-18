@@ -5,53 +5,27 @@ import { LeaveService } from '@services/leave.service';
 import { ActivatedRoute, Router } from '@angular/router';
 import { extractResultData } from '@shared/utils/result.utils';
 import { LeaveRequest } from '@shared/models/leave-request.model';
+import { NotificationService } from '@shared/utils/notification.service';
+import {
+  formatToDateInput,
+  countWorkingDays,
+  isWeekend,
+  isPublicHoliday,
+  toIsoDate
+} from '@shared/utils/date-utils'
 
 @Component({
   selector: 'app-leave-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
-  template: `
-    <div class="container mt-4" style="max-width: 500px;">
-      <h5 *ngIf="!isEdit">Submit Leave</h5>
-      <h5 *ngIf="isEdit">Update Leave</h5>
-
-      <form [formGroup]="form" (ngSubmit)="submit()">
-        <div class="mb-3">
-          <label>Leave Type</label>
-          <select class="form-select" formControlName="leaveType">
-            <option [value]="1">Annual</option>
-            <option [value]="2">Sick</option>
-            <option [value]="3">Unpaid</option>
-          </select>
-        </div>
-
-        <div class="mb-3">
-          <label>Start Date</label>
-          <input type="date" class="form-control" formControlName="startDate" />
-        </div>
-
-        <div class="mb-3">
-          <label>End Date</label>
-          <input type="date" class="form-control" formControlName="endDate" />
-        </div>
-
-        <div class="mb-3">
-          <label>Comments</label>
-          <textarea class="form-control" formControlName="comments"></textarea>
-        </div>
-
-        <button class="btn btn-primary w-100" [disabled]="form.invalid">
-          {{ isEdit ? 'Update' : 'Submit' }}
-        </button>
-      </form>
-    </div>
-  `
+  templateUrl: './leave-form.component.html'
 })
 export class LeaveFormComponent implements OnInit {
   private fb = inject(FormBuilder);
   private leaveService = inject(LeaveService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  public notification = inject(NotificationService);
 
   form = this.fb.nonNullable.group({
     leaveType: 1,
@@ -62,6 +36,7 @@ export class LeaveFormComponent implements OnInit {
 
   isEdit = false;
   id: string | null = null;
+  daysCount = 0;
 
   ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id');
@@ -70,38 +45,74 @@ export class LeaveFormComponent implements OnInit {
     if (this.isEdit) {
       this.leaveService.getLeaveById(this.id!).subscribe({
         next: (res) => {
-          const l = extractResultData<LeaveRequest>(res, () => alert('Failed to load leave data.'));
+          const l = extractResultData<LeaveRequest>(res, () =>
+            this.notification.show('Failed to load leave data.')
+          );
           if (l) {
             this.form.setValue({
               leaveType: l.leaveType,
-              startDate: l.startDate.split('T')[0],
-              endDate: l.endDate.split('T')[0],
+              startDate: formatToDateInput(l.startDate),
+              endDate: formatToDateInput(l.endDate),
               comments: l.comments ?? ''
             });
+            this.validateStartDate();
+            this.updateDaysCount();
           }
         },
-        error: () => alert('Something went wrong fetching the leave request.')
+        error: () => this.notification.show('Error fetching the leave request')
       });
+    }
+
+    this.form.get('startDate')?.valueChanges.subscribe(() => {
+      this.validateStartDate();
+      this.updateDaysCount();
+    });
+
+    this.form.get('endDate')?.valueChanges.subscribe(() => {
+      this.updateDaysCount();
+    });
+  }
+
+  validateStartDate(): void {
+    const value = this.form.get('startDate')?.value;
+    if (!value) return;
+
+    const date = new Date(value);
+    if (isWeekend(date) || isPublicHoliday(date)) {
+      this.notification.show('Start date cannot be a weekend or public holiday', 'danger');
+      this.form.get('startDate')?.setValue('');
     }
   }
 
-  submit() {
+  updateDaysCount(): void {
+    const start = this.form.get('startDate')?.value;
+    const end = this.form.get('endDate')?.value;
+
+    this.daysCount = countWorkingDays(start ?? '', end ?? '');
+  }
+  
+  submit(): void {
     if (this.form.invalid) return;
 
-    const payload = this.form.getRawValue() as {
-      leaveType: number;
-      startDate: string;
-      endDate: string;
-      comments?: string;
-    };
+    const payload = this.form.getRawValue();
 
     const request = this.isEdit
       ? this.leaveService.updateLeave(this.id!, payload)
       : this.leaveService.submitLeave(payload);
 
     request.subscribe({
-      next: () => this.router.navigateByUrl('/leave'),
-      error: () => alert('Failed to save leave request')
+      next: (res) => {
+        if (res.isSuccess) {
+          this.notification.show(this.isEdit ? 'Leave updated successfully' : 'Leave submitted successfully', 'success');
+          this.router.navigateByUrl('/leave');
+        } else {
+          this.notification.show(res.error || 'Failed to save leave request', 'danger');
+        }
+      },
+      error: (err) => {
+        const serverMessage = err?.error?.error ?? 'There was a problem serving your request';
+        this.notification.show(serverMessage, 'danger');
+      }
     });
   }
 }

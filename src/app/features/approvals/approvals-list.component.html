@@ -1,1 +1,51 @@
-<p>approvals-list works!</p>
+<div class="container mt-4">
+  <h5>Team Leave Requests</h5>
+
+  <ul class="list-group mt-3" *ngIf="leaves.length > 0; else noData">
+    <li class="list-group-item d-flex justify-content-between align-items-start" *ngFor="let leave of leaves">
+      <div>
+        <div>
+          <strong>{{ leave.leaveType | leaveTypeLabel }}</strong>
+          <span class="badge bg-secondary ms-2">{{ leave.status | leaveStatusLabel }}</span>
+        </div>
+
+        <div class="mt-1">
+          {{ leave.startDate | date }} → {{ leave.endDate | date }}
+        </div>
+        <div class="text-muted small">{{ leave.comments }}</div>
+        <div class="small text-muted">
+          Submitted by: <strong>{{ leave.employee?.fullName }}</strong>
+        </div>
+      </div>
+
+      <div class="ms-3" *ngIf="leave.status === 1">
+        <button class="btn btn-sm btn-success me-2" (click)="approve(leave.id)">Approve</button>
+        <button class="btn btn-sm btn-danger" (click)="openRejectModal(leave.id)">Reject</button>
+      </div>
+    </li>
+  </ul>
+
+  <ng-template #noData>
+    <p class="text-muted">No pending team leave requests.</p>
+  </ng-template>
+
+
+  <div class="modal fade" id="rejectModal" tabindex="-1" aria-labelledby="rejectModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <form class="modal-content" (submit)="submitRejection($event)">
+        <div class="modal-header">
+          <h5 class="modal-title" id="rejectModalLabel">Reject Leave Request</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <textarea [(ngModel)]="rejectionReason" name="rejectionReason" class="form-control"
+            placeholder="Enter reason..." rows="4" required></textarea>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-danger">Submit</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

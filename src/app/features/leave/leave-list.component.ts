@@ -1,45 +1,25 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { LeaveService } from '@services/leave.service';
-import { LeaveRequest } from '@shared/models/leave-request.model';
+import { LeaveRequestResult } from '@shared/models/leave-request.model';
 import { extractResultData } from '@shared/utils/result.utils';
 import { LeaveTypeLabelPipe } from '@shared/pipes/leave-type-label.pipe';
-
+import { LeaveStatusLabelPipe } from '@shared/pipes/leave-status-label.pipe';
+import { NotificationService } from '@shared/utils/notification.service';
 
 @Component({
   selector: 'app-leave-list',
   standalone: true,
-  imports: [CommonModule, LeaveTypeLabelPipe],
-  template: `
-    <div class="container mt-4">
-      <h5>My Leave Requests</h5>
-      <ul class="list-group mt-3" *ngIf="leaves.length > 0; else noData">
-        <li
-          class="list-group-item d-flex justify-content-between align-items-center"
-          *ngFor="let leave of leaves"
-        >
-          <div>
-            <strong>{{ leave.leaveType | leaveTypeLabel }}</strong>| |
-            {{ leave.startDate | date }} → {{ leave.endDate | date }}
-            <div class="text-muted small">{{ leave.comments }}</div>
-          </div>
-          <button
-            class="btn btn-sm btn-outline-danger"
-            (click)="deleteLeave(leave.id)"
-          >
-            Delete
-          </button>
-        </li>
-      </ul>
-      <ng-template #noData>
-        <p class="text-muted">No leave requests found.</p>
-      </ng-template>
-    </div>
-  `,
+  imports: [CommonModule, RouterModule, LeaveTypeLabelPipe, LeaveStatusLabelPipe],
+  templateUrl: './leave-list.component.html'
 })
 export class LeaveListComponent implements OnInit {
   private leaveService = inject(LeaveService);
-  leaves: LeaveRequest[] = [];
+  public notification = inject(NotificationService);
+
+  confirmingDeleteId: string | null = null;
+  leaves: LeaveRequestResult[] = [];
 
   ngOnInit(): void {
     this.fetchLeaves();
@@ -48,23 +28,38 @@ export class LeaveListComponent implements OnInit {
   fetchLeaves(): void {
     this.leaveService.getMyLeave().subscribe({
       next: (res) => {
-        const data = extractResultData<LeaveRequest[]>(res, () =>
-          alert('Failed to load your leave requests.')
+        const data = extractResultData<LeaveRequestResult[]>(res, () =>
+          this.notification.show('Failed to load your leave requests.', 'danger')
         );
         this.leaves = data ?? [];
       },
-      error: () => alert('Something went wrong loading your leave list.')
+      error: () => this.notification.show('Something went wrong loading your leave list.', 'danger')
     });
   }
 
   deleteLeave(id: string): void {
-    if (!confirm('Are you sure you want to delete this leave request?')) return;
-
     this.leaveService.cancelLeave(id).subscribe({
       next: () => {
         this.leaves = this.leaves.filter((l) => l.id !== id);
+        this.confirmingDeleteId = null;
+        this.notification.show('Leave cancelled successfully', 'success');
       },
-      error: () => alert('Failed to delete leave request')
+      error: (err) => {
+        const message =
+          typeof err.error === 'string'
+            ? err.error
+            : err?.error?.error ?? 'Failed to cancel leave request';
+        this.notification.show(message, 'danger');
+      }
     });
   }
+
+  confirmDelete(id: string): void {
+    this.confirmingDeleteId = id;
+  }
+
+  cancelDelete(): void {
+    this.confirmingDeleteId = null;
+  }
 }
+

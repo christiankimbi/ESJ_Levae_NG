@@ -1,1 +1,62 @@
-<p>leave-list works!</p>
+<div class="container mt-4">
+  <div *ngIf="notification.state$ | async as state" class="alert alert-{{ state.type }} alert-dismissible fade show"
+    role="alert">
+    {{ state.message }}
+    <button type="button" class="btn-close" aria-label="Close" (click)="notification.clear()"></button>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <h5 class="mb-0">My Leave Requests</h5>
+    <a class="btn btn-primary" [routerLink]="['/leave', 'new']">+ Add Leave</a>
+  </div>
+
+    <ul class="list-group" *ngIf="leaves.length > 0; else noData">
+      <li class="list-group-item d-flex justify-content-between align-items-center" *ngFor="let leave of leaves">
+        <div>
+          <ng-container *ngIf="leave.status === 1; else plainLabel">
+            <a [routerLink]="['/leave', leave.id, 'edit']" class="text-decoration-none fw-bold">
+              {{ leave.leaveType | leaveTypeLabel }}
+            </a>
+          </ng-container>
+          <ng-template #plainLabel>
+            <strong>{{ leave.leaveType | leaveTypeLabel }}</strong>
+          </ng-template>
+
+          <span class="badge ms-2" [ngClass]="{
+              'bg-secondary': leave.status === 1,
+              'bg-success': leave.status === 2,
+              'bg-danger': leave.status === 3
+            }">
+            {{ leave.status | leaveStatusLabel }}
+          </span>
+          <br />
+          {{ leave.startDate | date }} &rarr; {{ leave.endDate | date }}
+          <div class="text-muted small">{{ leave.comments }}</div>
+          <div class="text-muted small" *ngIf="leave.status === 2 && leave.approver">
+            Approved by {{ leave.approver.fullName }}
+          </div>
+          <div class="text-muted small text-danger" *ngIf="leave.status === 3 && leave.approver">
+            Rejected by {{ leave.approver.fullName }}
+          </div>
+          <div class="text-muted small text-danger" *ngIf="leave.status === 3 && leave.approver && leave.rejectionReason">
+            <span>* Reason:  {{ leave?.rejectionReason || '' }}</span>
+          </div>
+        </div>
+
+        <div *ngIf="leave.status === 1">
+          <div *ngIf="confirmingDeleteId === leave.id; else showDelete">
+            <button class="btn btn-sm btn-danger me-2" (click)="deleteLeave(leave.id)">Confirm</button>
+            <button class="btn btn-sm btn-secondary" (click)="cancelDelete()">Cancel</button>
+          </div>
+          <ng-template #showDelete>
+            <button class="btn btn-sm btn-outline-danger" (click)="confirmDelete(leave.id)">Cancel Leave</button>
+          </ng-template>
+        </div>
+      </li>
+    </ul>
+
+
+  <ng-template #noData>
+    <p class="text-muted">No leave requests found.</p>
+  </ng-template>
+</div>

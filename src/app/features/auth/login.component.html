@@ -1,1 +1,31 @@
-<p>login works!</p>
+<div class="d-flex justify-content-center align-items-center min-vh-100 bg-light">
+  <div class="card shadow p-4" style="width: 100%; max-width: 400px;">
+    <h4 class="mb-3 text-center">ESJ Leave Login</h4>
+
+    <div *ngIf="notification.state$ | async as state" class="alert alert-{{ state.type }} alert-dismissible fade show"
+      role="alert">
+      {{ state.message }}
+      <button type="button" class="btn-close" (click)="notification.clear()"></button>
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="onSubmit()">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" formControlName="email" class="form-control"
+          [class.is-invalid]="form.get('email')?.invalid && form.get('email')?.touched" id="email" />
+        <div class="invalid-feedback">Valid email is required</div>
+      </div>
+
+      <div class="mb-3">
+        <label for="password" class="form-label">Password</label>
+        <input type="password" formControlName="password" class="form-control"
+          [class.is-invalid]="form.get('password')?.invalid && form.get('password')?.touched" id="password" />
+        <div class="invalid-feedback">Password is required</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-100" [disabled]="form.invalid">
+        Login
+      </button>
+    </form>
+  </div>
+</div>
